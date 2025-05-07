@@ -5,16 +5,16 @@
 void init_fifoQ(FifoQT *fila) {
     fila->head = 0;
     fila->tail = 0;
+    fila->recursoLivre = 1;
     sem_init(&fila->mutex, 1, 1);
-    sem_init(&fila->recurso, 1, 1);
 }
 
-void enfila(FifoQT* fila, int pid) {
+void enfila(FifoQT* fila, int Pi) {
     if ((fila->tail + 1) % MAX_NODES == fila->head) {
         printf("Fila de processos encheu, terminando o programa\n");
         return;
     }
-    fila->nodos[fila->tail].pid = pid;
+    fila->nodos[fila->tail].Pi = Pi;
     sem_init(&fila->nodos[fila->tail].sem, 1, 0);
     fila->tail = (fila->tail + 1) % MAX_NODES;
 }

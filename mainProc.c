@@ -16,28 +16,31 @@
 #define SHM_BARR 1234
 #define SHM_FILA 5678
 
-void inicia_uso(FifoQT * fila, int pid) {
+//#define DEBUG //descomentar para ver o debug
+
+void inicia_uso(FifoQT * fila, int Pi, int recurso) {
     sem_wait(&fila->mutex); //bloqueia a mutex para garantir que um processo lida com a fila por vez
 
-    if (sem_trywait(&fila->recurso) == 0) { //se o recurso esta livre para uso, sai da funcao
+    if (fila->recursoLivre) { //se o recurso esta livre para uso, sai da funcao
+        fila->recursoLivre = 0; //o recurso não esta mais livre
         sem_post(&fila->mutex); //desbloqueia o mutex
         return;
     }
     int myIndex = fila->tail;
-    enfila(fila, pid); //enfila o processo
+    enfila(fila, Pi); //enfila o processo
     sem_post(&fila->mutex); //desbloqueia o mutex
     sem_wait(&fila->nodos[myIndex].sem); //faz o processo atual esperar ate chegar sua vez
     sem_destroy(&fila->nodos[myIndex].sem); //processo saiu da espera e esse semáforo não será usado novamente, então destruimos
 }
 
-void termina_uso(FifoQT * fila) {
+void termina_uso(FifoQT * fila, int recurso) {
     sem_wait(&fila->mutex); //bloqueia a mutex para garantir que so um processo lida com a fila
     
     nodoProc_t* next = desenfila(fila);
     if (next != NULL) {
         sem_post(&next->sem); //tem gente na fila, ele vai ser o primeiro a usar
     } else {
-        sem_post(&fila->recurso); //ninguem vai usar o recurso, o primeiro que aparecer pode pegar
+        fila->recursoLivre = 1; //ninguem vai usar o recurso, o primeiro que aparecer pode pegar
     }
     sem_post(&fila->mutex); //desbloqueia o mutex
 }   
@@ -66,7 +69,7 @@ int main(int argc, char** argv) {
     int n = atoi(argv[1]); //Número de processos a ser criado
     if (n > MAX_NODES) {
         printf("Número de processos ultrapassa o máximo definido no programa.\n"
-               "Esse valor pode ser mudado aumentando o valor de MAX_NODES.\n");
+               "Esse valor pode ser mudado aumentando o valor de MAX_NODES(que atualmente eh %d).\n", MAX_NODES);
         exit(1);
     }
     
@@ -105,7 +108,7 @@ int main(int argc, char** argv) {
         } else if (pid == 0) {
             // garante que o os filhos nao fazem fork
             Pi = i + 1;
-            srand(time(NULL));
+            srand(time(NULL) + Pi); //semente diferente para cada filho
             break;
         }
     }
@@ -116,15 +119,31 @@ int main(int argc, char** argv) {
 
     int uso;
     for(uso=0; uso<3; uso++ ) {
+        
+#ifdef DEBUG
+        printf("Conteúdo da fila:");
+
+        int i = fila->head;
+        while (i != fila->tail) {
+            printf(" %d", fila->nodos[i].Pi);
+            i = (i + 1) % MAX_NODES;
+        }
+
+        if (fila->head == fila->tail) {
+            printf("(Fila vazia)");
+        }
+        printf("\n");
+#endif
+
         int s = rand() % 4;
         printf( "Processo: %d Prologo: %d de %d segundos\n", Pi, uso, s);
         sleep(s);
-        inicia_uso(fila, Pi);
+        inicia_uso(fila, Pi, recurso);
 
         s = rand() % 4;
         printf("Processo: %d USO: %d por %d segundos\n", Pi, uso, s);
         sleep(s);
-        termina_uso(fila);
+        termina_uso(fila, recurso);
         
         s = rand() % 4;
         printf("Processo: %d Epílogo: %d por %d segundos\n", Pi, uso, s);
@@ -144,7 +163,6 @@ int main(int argc, char** argv) {
         }
 
         sem_destroy(&fila->mutex);
-        sem_destroy(&fila->recurso);
         sem_destroy(&barr->mutex);
         sem_destroy(&barr->sem);
         shmdt(barr);

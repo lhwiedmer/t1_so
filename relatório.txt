@@ -33,23 +33,22 @@ que é bloqueado antes de fazer ações críticas para evitar condições de cor
 A segunda estrutura utilizada foi uma estrutura de nodo para guardar os dados do processo:
 
 typedef struct nodoProc {
-    int pid;
+    int Pi;
     sem_t sem;
 } nodoProc_t;
 
-Pid é o pid lógico do processo(0 é o pai, 1 é o primeiro filho, 2 é o segundo e assim segue),
-e sem é o semáforo que que controla se o processo deve esperar ou pode usar o recurso. Pid não
-foi utilizado na implementação desse projeto, mas foi mantido na estrutura pela possibilidade
-de uso no futuro.
+Pi é o pid lógico do processo(0 é o pai, 1 é o primeiro filho, 2 é o segundo e assim segue),
+e sem é o semáforo que que controla se o processo deve esperar ou pode usar o recurso. Pi não
+foi utilizado na implementação, mas foi necessário para fazer o debug.
 
 A terceira estrutura é uma estrutura de fila FIFO:
 
 typedef struct fifoQ_s {
     int head;
     int tail;
+    int recursoLivre;
     nodoProc_t nodos[MAX_NODES];
     sem_t mutex;
-    sem_t recurso;
 } FifoQT;
 
 Head é o índice da cabeça da fila(a posição a ser retirada), e tail a posição em que deve ser
@@ -79,7 +78,7 @@ void init_fifoQ(FifoQT *fila);
 os semáforos com sem_init, para que eles possam ser utilizados com shared
 memory.
 
-void enfila(FifoQT* fila, int pid);
+void enfila(FifoQT* fila, int Pi);
     Essa função cria um nodo para o processo que chamou a funcao, e o coloca na fila.
 Obs: A funcao nao tem mutex interno, entao eh necessario utilizar bloqueio externo ao fazer a chamada.
 
@@ -90,5 +89,5 @@ Obs: A funcao nao tem mutex interno, entao eh necessario utilizar bloqueio exter
 5.Limitações
     O fato de o processo pai funcionar como os processos filhos, faz com que seja possível que o programa
 entre em deadlock caso a fila de processos fique cheia. Isso pode ser resolvido com um programa watchdog
-externo ou fazendo com que o pai seja apenas um supervisor. POr conta da simplicidade da implementação,
+externo ou fazendo com que o pai seja apenas um supervisor. Por conta da simplicidade da implementação,
 foi feita apenas uma trava, impedindo que o programa funcione para n's maiores que MAX_NODES.

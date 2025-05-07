@@ -3,19 +3,19 @@
 
 #include <semaphore.h>
 
-#define MAX_NODES 20
+#define MAX_NODES 100
 
 typedef struct nodoProc {
-    int pid; //Nao eh usado nesse programa, mas fica para posibilidade de uso futuro
+    int Pi; //Usado para debug
     sem_t sem;
 } nodoProc_t;
 
 typedef struct fifoQ_s {
     int head;
     int tail;
+    int recursoLivre;
     nodoProc_t nodos[MAX_NODES];
     sem_t mutex;
-    sem_t recurso;
 } FifoQT;
 
 /* Inicializa a fila. Obs: F precisa estar alocada em shared memory. */

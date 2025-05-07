@@ -29,31 +29,29 @@ que é bloqueado antes de fazer ações críticas para evitar condições de cor
 A segunda estrutura utilizada foi uma estrutura de nodo para guardar os dados do processo:
 
 typedef struct nodoProc {
-    int pid;
+    int Pi;
     sem_t sem;
 } nodoProc_t;
 
-Pid é o pid lógico do processo(0 é o pai, 1 é o primeiro filho, 2 é o segundo e assim segue),
-e sem é o semáforo que que controla se o processo deve esperar ou pode usar o recurso. Pid não
-foi utilizado na implementação desse projeto, mas foi mantido na estrutura pela possibilidade
-de uso no futuro.
+Pi é o pid lógico do processo(0 é o pai, 1 é o primeiro filho, 2 é o segundo e assim segue),
+e sem é o semáforo que que controla se o processo deve esperar ou pode usar o recurso. Pi não
+foi utilizado na implementação, mas foi necessário para fazer o debug.
 
 A terceira estrutura é uma estrutura de fila FIFO:
 
 typedef struct fifoQ_s {
     int head;
     int tail;
+    int recursoLivre;
     nodoProc_t nodos[MAX_NODES];
     sem_t mutex;
-    sem_t recurso;
 } FifoQT;
 
-Head é o índice da cabeça da fila(a posição a ser retirada), e tail a posição em que deve ser
-enfileirado o próximo elemento. Nodos é um vetor de tamanho MAX_NODES que guarda os dados dos
-processos(foi escolhido um vetor para a fila porque é necessário o uso de memória compartilhada,
-o que tornaria difícil o uso de uma lista ligada). Mutex novamente é um semáforo para garantir
-com a função de evitar condições de corrida e recurso é um semáforo que controla o uso do recurso
-(bloqueia qunado está sendo usado, e libera ao fim do uso).
+Head é o índice da cabeça da fila(a posição a ser retirada), e tail a posição em que deve 
+ser enfileiradoo próximo elemento, e recursoLivre é uma variável que mostra se o recurso
+está livre para uso ou não. Nodos é um vetor de tamanho MAX_NODES que guarda os dados dos
+processos(foi escolhido um vetor para a fila porque é necessário o uso de memória compartilhada).
+Mutex novamente é um semáforo para garantir com a função de evitar condições de corrida.
 
 4.Funções
     Tanto o módulo da barreira quanto o da FIFO possuem suas própria funções, sendo elas:
@@ -75,7 +73,7 @@ void init_fifoQ(FifoQT *fila);
 os semáforos com sem_init, para que eles possam ser utilizados com shared
 memory.
 
-void enfila(FifoQT* fila, int pid);
+void enfila(FifoQT* fila, int Pi);
     Essa função cria um nodo para o processo que chamou a funcao, e o coloca na fila.
 Obs: A funcao nao tem mutex interno, entao eh necessario utilizar bloqueio externo ao fazer a chamada.
 
@@ -86,5 +84,5 @@ Obs: A funcao nao tem mutex interno, entao eh necessario utilizar bloqueio exter
 5.Limitações
     O fato de o processo pai funcionar como os processos filhos, faz com que seja possível que o programa
 entre em deadlock caso a fila de processos fique cheia. Isso pode ser resolvido com um programa watchdog
-externo ou fazendo com que o pai seja apenas um supervisor. POr conta da simplicidade da implementação,
+externo ou fazendo com que o pai seja apenas um supervisor. Por conta da simplicidade da implementação,
 foi feita apenas uma trava, impedindo que o programa funcione para n's maiores que MAX_NODES.
